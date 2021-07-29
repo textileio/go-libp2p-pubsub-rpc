@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ipfs/go-cid"
 	util "github.com/ipfs/go-ipfs-util"
@@ -174,6 +175,36 @@ func (t *Topic) Publish(
 		}
 	}
 
+	resultCh := make(chan Response)
+	go func() {
+		defer close(resultCh)
+		wait := args.retryWait
+		for i := 0; i <= args.numRetries; i++ {
+			if i > 0 {
+				newWaitNanos := float32(wait.Nanoseconds()) * args.retryBackoff
+				wait = time.Duration(int64(newWaitNanos))
+			}
+			retry := false
+			rctx, cancel := context.WithTimeout(ctx, args.retryTimeout)
+			for r := range t.publish(rctx, data, args) {
+				if errors.Is(r.Err, ErrResponseNotReceived) && i < args.numRetries && ctx.Err() == nil {
+					retry = true
+				} else {
+					resultCh <- r
+				}
+			}
+			cancel()
+			if !retry {
+				break
+			}
+			log.Debugf("%s retrying publish (%d/%d) in %s", t.t, i+1, args.numRetries, wait)
+			time.Sleep(wait)
+		}
+	}()
+	return resultCh, nil
+}
+
+func (t *Topic) publish(ctx context.Context, data []byte, args PublishOptions) <-chan Response {
 	var respCh chan internalResponse
 	var msgID cid.Cid
 	if !args.ignoreResponse {
@@ -184,11 +215,14 @@ func (t *Topic) Publish(
 		t.lk.Unlock()
 	}
 
+	resultCh := make(chan Response, 1)
 	if err := t.t.Publish(ctx, data, args.pubOpts...); err != nil {
-		return nil, fmt.Errorf("publishing to main topic: %v", err)
+		resultCh <- Response{
+			Err: fmt.Errorf("publishing to topic: %v", err),
+		}
+		return resultCh
 	}
 
-	resultCh := make(chan Response)
 	if respCh != nil {
 		go func() {
 			defer func() {
@@ -197,10 +231,11 @@ func (t *Topic) Publish(
 				t.lk.Unlock()
 				close(resultCh)
 			}()
+			respCount := 0
 			for {
 				select {
 				case <-ctx.Done():
-					if !args.multiResponse {
+					if respCount == 0 {
 						resultCh <- Response{
 							Err: ErrResponseNotReceived,
 						}
@@ -215,6 +250,7 @@ func (t *Topic) Publish(
 					if r.Err != "" {
 						res.Err = errors.New(r.Err)
 					}
+					respCount++
 					resultCh <- res
 					if !args.multiResponse {
 						return
@@ -225,8 +261,7 @@ func (t *Topic) Publish(
 	} else {
 		close(resultCh)
 	}
-
-	return resultCh, nil
+	return resultCh
 }
 
 func (t *Topic) watch() {
@@ -332,8 +367,6 @@ func (t *Topic) resMessageHandler(from peer.ID, topic string, msg []byte) ([]byt
 	t.lk.Unlock()
 	if ch != nil {
 		ch <- res
-	} else {
-		log.Warnf("%s missed response from %s: %s", topic, from, res.ID)
 	}
 	return nil, nil // no response to a response
 }

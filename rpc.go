@@ -168,7 +168,7 @@ func (t *Topic) SetMessageHandler(handler MessageHandler) {
 	t.messageHandler = handler
 }
 
-// Publish data. See PublishOptions for option details.
+// Publish data. Note that the data may arrive peers duplicated. See PublishOptions for option details.
 func (t *Topic) Publish(
 	ctx context.Context,
 	data []byte,
@@ -182,8 +182,7 @@ func (t *Topic) Publish(
 	}
 
 	var respCh chan internalResponse
-	var msgID cid.Cid
-	msgID = cid.NewCidV1(cid.Raw, util.Hash(data))
+	msgID := cid.NewCidV1(cid.Raw, util.Hash(data))
 	if !args.ignoreResponse {
 		respCh = make(chan internalResponse)
 	}

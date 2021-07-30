@@ -86,6 +86,12 @@ func TestPingPong(t *testing.T) {
 	assert.NotEmpty(t, r2.ID)
 	assert.Equal(t, p1.Host().ID().String(), r2.From.String())
 
+	// test ignore response - make sure nothing weird happens.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	_, err = t1.Publish(ctx, []byte("ping"), rpc.WithIgnoreResponse(true))
+	require.NoError(t, err)
+	cancel()
+
 	// test retries; peer1 requests "pong" from peer2, but peer2 joins topic after the request
 	t3, err := p1.NewTopic(context.Background(), "topic2", true)
 	require.NoError(t, err)
@@ -107,7 +113,7 @@ func TestPingPong(t *testing.T) {
 	}()
 
 	// allow enough time for peer2 join event to be propagated.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 	rc3, err := t3.Publish(ctx, []byte("ping"))
 	require.NoError(t, err)

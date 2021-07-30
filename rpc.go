@@ -200,9 +200,6 @@ func (t *Topic) Publish(
 	}
 
 	resultCh := make(chan Response)
-	if args.ignoreResponse {
-		close(resultCh)
-	}
 	go func() {
 		defer func() {
 			t.lk.Lock()
@@ -269,10 +266,11 @@ func (t *Topic) watch() {
 	}
 }
 
-func (t *Topic) republishTo(peer.ID) {
+func (t *Topic) republishTo(p peer.ID) {
 	t.lk.Lock()
 	for _, m := range t.ongoing {
 		go func(m ongoingMessage) {
+			log.Debugf("republishing %s because peer %s newly joins", t.t, p)
 			if err := t.t.Publish(m.ctx, m.data, m.opts...); err != nil {
 				log.Errorf("republishing to topic: %v", err)
 			}
@@ -359,10 +357,12 @@ func (t *Topic) resMessageHandler(from peer.ID, topic string, msg []byte) ([]byt
 	t.lk.Lock()
 	m, exists := t.ongoing[id]
 	t.lk.Unlock()
-	if exists && m.respCh != nil {
-		m.respCh <- res
+	if exists {
+		if m.respCh != nil {
+			m.respCh <- res
+		}
 	} else {
-		log.Warnf("%s missed response from %s: %s", topic, from, res.ID)
+		log.Debugf("%s response from %s arrives too late, discarding", topic, from)
 	}
 	return nil, nil // no response to a response
 }

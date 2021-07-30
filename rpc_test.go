@@ -2,6 +2,7 @@ package rpc_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -46,7 +47,7 @@ func TestPingPong(t *testing.T) {
 	eventHandler := func(from core.ID, topic string, msg []byte) {
 		t.Logf("%s event: %s %s", topic, from, msg)
 	}
-	messageHandler := func(from core.ID, topic string, msg []byte) ([]byte, error) {
+	messageHandler := func(from core.ID, topic string, msg []byte) ([]byte, error) { // nolint:unparam
 		t.Logf("%s message: %s %s", topic, from, msg)
 		return []byte("pong"), nil
 	}
@@ -85,7 +86,36 @@ func TestPingPong(t *testing.T) {
 	assert.NotEmpty(t, r2.ID)
 	assert.Equal(t, p1.Host().ID().String(), r2.From.String())
 
+	// test retries; peer1 requests "pong" from peer2, but peer2 joins topic after the request
+	t3, err := p1.NewTopic(context.Background(), "topic2", true)
+	require.NoError(t, err)
+	t3.SetEventHandler(eventHandler)
+	t3.SetMessageHandler(messageHandler)
+	fin.Add(t3)
+
+	lk := sync.Mutex{}
+	go func() {
+		time.Sleep(time.Second * 5) // wait until after peer1 publishes the request
+
+		t4, err := p2.NewTopic(context.Background(), "topic2", true)
+		require.NoError(t, err)
+		t4.SetEventHandler(eventHandler)
+		t4.SetMessageHandler(messageHandler)
+		lk.Lock()
+		fin.Add(t4)
+		lk.Unlock()
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10) // allow enough time for retries and wait
+	defer cancel()
+	rc3, err := t3.Publish(ctx, []byte("ping"))
+	require.NoError(t, err)
+	r3 := <-rc3
+	require.NoError(t, r3.Err)
+
+	lk.Lock()
 	require.NoError(t, fin.Cleanup(nil))
+	lk.Unlock()
 }
 
 func TestMultiPingPong(t *testing.T) {
@@ -115,7 +145,7 @@ func TestMultiPingPong(t *testing.T) {
 	eventHandler := func(from core.ID, topic string, msg []byte) {
 		t.Logf("%s event: %s %s", topic, from, msg)
 	}
-	messageHandler := func(from core.ID, topic string, msg []byte) ([]byte, error) {
+	messageHandler := func(from core.ID, topic string, msg []byte) ([]byte, error) { // nolint:unparam
 		t.Logf("%s message: %s %s", topic, from, msg)
 		return []byte("pong"), nil
 	}
@@ -155,7 +185,55 @@ func TestMultiPingPong(t *testing.T) {
 	}
 	assert.Len(t, pongs, 2)
 
+	// test retries; peer1 requests "pong" from peer2 and peer3, but peer2 and peer3 join topic after the request
+	t4, err := p1.NewTopic(context.Background(), "topic2", true)
+	require.NoError(t, err)
+	t4.SetEventHandler(eventHandler)
+	t4.SetMessageHandler(messageHandler)
+	fin.Add(t4)
+
+	var lk sync.Mutex
+	go func() {
+		time.Sleep(time.Second * 5) // wait until after peer1 publishes the request
+
+		t5, err := p2.NewTopic(context.Background(), "topic2", true)
+		require.NoError(t, err)
+		t5.SetEventHandler(eventHandler)
+		t5.SetMessageHandler(messageHandler)
+		lk.Lock()
+		fin.Add(t5)
+		lk.Unlock()
+
+		t6, err := p3.NewTopic(context.Background(), "topic2", true)
+		require.NoError(t, err)
+		t6.SetEventHandler(eventHandler)
+		t6.SetMessageHandler(messageHandler)
+		lk.Lock()
+		fin.Add(t6)
+		lk.Unlock()
+	}()
+
+	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second*10) // allow enough time for retries and wait
+	defer cancel2()
+	rc2, err := t4.Publish(
+		ctx2,
+		[]byte("ping"),
+		rpc.WithMultiResponse(true),
+	)
+	require.NoError(t, err)
+	var pongs2 []struct{}
+	for r := range rc2 {
+		require.NotNil(t, r)
+		require.NoError(t, r.Err)
+		assert.Equal(t, "pong", string(r.Data))
+		assert.NotEmpty(t, r.ID)
+		pongs2 = append(pongs2, struct{}{})
+	}
+	assert.Len(t, pongs2, 2)
+
+	lk.Lock()
 	require.NoError(t, fin.Cleanup(nil))
+	lk.Unlock()
 }
 
 func setLogLevels(systems map[string]logging.LogLevel) error {

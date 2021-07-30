@@ -95,7 +95,7 @@ func TestPingPong(t *testing.T) {
 
 	lk := sync.Mutex{}
 	go func() {
-		time.Sleep(time.Second * 5) // wait until after peer1 publishes the request
+		time.Sleep(time.Second) // wait until after peer1 publishes the request
 
 		t4, err := p2.NewTopic(context.Background(), "topic2", true)
 		require.NoError(t, err)
@@ -106,7 +106,8 @@ func TestPingPong(t *testing.T) {
 		lk.Unlock()
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10) // allow enough time for retries and wait
+	// allow enough time for peer2 join event to be propagated.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 	rc3, err := t3.Publish(ctx, []byte("ping"))
 	require.NoError(t, err)
@@ -194,7 +195,7 @@ func TestMultiPingPong(t *testing.T) {
 
 	var lk sync.Mutex
 	go func() {
-		time.Sleep(time.Second * 5) // wait until after peer1 publishes the request
+		time.Sleep(time.Second) // wait until after peer1 publishes the request
 
 		t5, err := p2.NewTopic(context.Background(), "topic2", true)
 		require.NoError(t, err)
@@ -212,8 +213,8 @@ func TestMultiPingPong(t *testing.T) {
 		fin.Add(t6)
 		lk.Unlock()
 	}()
-
-	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second*10) // allow enough time for retries and wait
+	// allow enough time for peer2 join event to be propagated.
+	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel2()
 	rc2, err := t4.Publish(
 		ctx2,
@@ -229,7 +230,7 @@ func TestMultiPingPong(t *testing.T) {
 		assert.NotEmpty(t, r.ID)
 		pongs2 = append(pongs2, struct{}{})
 	}
-	assert.Len(t, pongs2, 2)
+	assert.True(t, len(pongs2) >= 2, "at least 2 responses should have been received")
 
 	lk.Lock()
 	require.NoError(t, fin.Cleanup(nil))

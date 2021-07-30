@@ -56,6 +56,13 @@ func responseTopic(base string, pid peer.ID) string {
 	return path.Join(base, pid.String(), "_response")
 }
 
+type ongoingMessage struct {
+	ctx    context.Context
+	data   []byte
+	opts   []pubsub.PubOpt
+	respCh chan internalResponse
+}
+
 // Topic provides a nice interface to a libp2p pubsub topic.
 type Topic struct {
 	ps             *pubsub.PubSub
@@ -63,7 +70,7 @@ type Topic struct {
 	eventHandler   EventHandler
 	messageHandler MessageHandler
 
-	resChs   map[cid.Cid]chan internalResponse
+	ongoing  map[cid.Cid]ongoingMessage
 	resTopic *Topic
 
 	t *pubsub.Topic
@@ -88,7 +95,6 @@ func NewTopic(ctx context.Context, ps *pubsub.PubSub, host peer.ID, topic string
 	}
 	t.resTopic.eventHandler = t.resEventHandler
 	t.resTopic.messageHandler = t.resMessageHandler
-	t.resChs = make(map[cid.Cid]chan internalResponse)
 	return t, nil
 }
 
@@ -112,11 +118,12 @@ func newTopic(ctx context.Context, ps *pubsub.PubSub, host peer.ID, topic string
 	}
 
 	t := &Topic{
-		ps:   ps,
-		host: host,
-		t:    top,
-		h:    handler,
-		s:    sub,
+		ps:      ps,
+		host:    host,
+		t:       top,
+		h:       handler,
+		s:       sub,
+		ongoing: make(map[cid.Cid]ongoingMessage),
 	}
 	t.ctx, t.cancel = context.WithCancel(ctx)
 
@@ -161,7 +168,7 @@ func (t *Topic) SetMessageHandler(handler MessageHandler) {
 	t.messageHandler = handler
 }
 
-// Publish data. See PublishOptions for option details.
+// Publish data. Note that the data may arrive peers duplicated. See PublishOptions for option details.
 func (t *Topic) Publish(
 	ctx context.Context,
 	data []byte,
@@ -175,57 +182,59 @@ func (t *Topic) Publish(
 	}
 
 	var respCh chan internalResponse
-	var msgID cid.Cid
+	msgID := cid.NewCidV1(cid.Raw, util.Hash(data))
 	if !args.ignoreResponse {
-		msgID = cid.NewCidV1(cid.Raw, util.Hash(data))
 		respCh = make(chan internalResponse)
-		t.lk.Lock()
-		t.resChs[msgID] = respCh
-		t.lk.Unlock()
 	}
+	t.lk.Lock()
+	t.ongoing[msgID] = ongoingMessage{
+		ctx:    ctx,
+		data:   data,
+		opts:   args.pubOpts,
+		respCh: respCh,
+	}
+	t.lk.Unlock()
 
 	if err := t.t.Publish(ctx, data, args.pubOpts...); err != nil {
-		return nil, fmt.Errorf("publishing to main topic: %v", err)
+		return nil, fmt.Errorf("publishing to topic: %v", err)
 	}
 
 	resultCh := make(chan Response)
-	if respCh != nil {
-		go func() {
-			defer func() {
-				t.lk.Lock()
-				delete(t.resChs, msgID)
-				t.lk.Unlock()
-				close(resultCh)
-			}()
-			for {
-				select {
-				case <-ctx.Done():
-					if !args.multiResponse {
-						resultCh <- Response{
-							Err: ErrResponseNotReceived,
-						}
-					}
+	go func() {
+		defer func() {
+			t.lk.Lock()
+			delete(t.ongoing, msgID)
+			t.lk.Unlock()
+			close(resultCh)
+		}()
+		for {
+			select {
+			case <-ctx.Done():
+				if args.ignoreResponse {
 					return
-				case r := <-respCh:
-					res := Response{
-						ID:   r.ID,
-						From: peer.ID(r.From),
-						Data: r.Data,
-					}
-					if r.Err != "" {
-						res.Err = errors.New(r.Err)
-					}
+				}
+				if !args.multiResponse {
+					resultCh <- Response{Err: ErrResponseNotReceived}
+				}
+				return
+			case r := <-respCh:
+				res := Response{
+					ID:   r.ID,
+					From: peer.ID(r.From),
+					Data: r.Data,
+				}
+				if r.Err != "" {
+					res.Err = errors.New(r.Err)
+				}
+				if !args.ignoreResponse {
 					resultCh <- res
-					if !args.multiResponse {
-						return
-					}
+				}
+				if !args.multiResponse {
+					return
 				}
 			}
-		}()
-	} else {
-		close(resultCh)
-	}
-
+		}
+	}()
 	return resultCh, nil
 }
 
@@ -239,6 +248,11 @@ func (t *Topic) watch() {
 		switch e.Type {
 		case pubsub.PeerJoin:
 			msg = "JOINED"
+			// Note: it looks like we are publishing to this
+			// specific peer, but the rpc library doesn't have the
+			// ability, so it actually does is to republish to all
+			// peers.
+			t.republishTo(e.Peer)
 		case pubsub.PeerLeave:
 			msg = "LEFT"
 		default:
@@ -250,6 +264,19 @@ func (t *Topic) watch() {
 		}
 		t.lk.Unlock()
 	}
+}
+
+func (t *Topic) republishTo(p peer.ID) {
+	t.lk.Lock()
+	for _, m := range t.ongoing {
+		go func(m ongoingMessage) {
+			log.Debugf("republishing %s because peer %s newly joins", t.t, p)
+			if err := t.t.Publish(m.ctx, m.data, m.opts...); err != nil {
+				log.Errorf("republishing to topic: %v", err)
+			}
+		}(m)
+	}
+	t.lk.Unlock()
 }
 
 func (t *Topic) listen() {
@@ -328,12 +355,14 @@ func (t *Topic) resMessageHandler(from peer.ID, topic string, msg []byte) ([]byt
 
 	log.Debugf("%s response from %s: %s", topic, from, res.ID)
 	t.lk.Lock()
-	ch := t.resChs[id]
+	m, exists := t.ongoing[id]
 	t.lk.Unlock()
-	if ch != nil {
-		ch <- res
+	if exists {
+		if m.respCh != nil {
+			m.respCh <- res
+		}
 	} else {
-		log.Warnf("%s missed response from %s: %s", topic, from, res.ID)
+		log.Debugf("%s response from %s arrives too late, discarding", topic, from)
 	}
 	return nil, nil // no response to a response
 }

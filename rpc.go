@@ -168,7 +168,9 @@ func (t *Topic) SetMessageHandler(handler MessageHandler) {
 	t.messageHandler = handler
 }
 
-// Publish data. Note that the data may arrive peers duplicated. See PublishOptions for option details.
+// Publish data. Note that the data may arrive peers duplicated. And as a
+// result, if WithMultiResponse is supplied, the response may be duplicated as
+// well. See PublishOptions for option details.
 func (t *Topic) Publish(
 	ctx context.Context,
 	data []byte,
@@ -309,7 +311,10 @@ func (t *Topic) listen() {
 
 func (t *Topic) publishResponse(from peer.ID, id cid.Cid, data []byte, e error) {
 	topic, err := newTopic(t.ctx, t.ps, t.host, responseTopic(t.t.String(), from), false)
-	if err != nil {
+	if err != nil &&
+		// this can happen when more than one messages are received
+		// from the same peer.
+		!strings.Contains(err.Error(), "topic already exists") {
 		log.Errorf("creating response topic: %v", err)
 		return
 	}

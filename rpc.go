@@ -289,9 +289,11 @@ func (t *Topic) listen() {
 			continue
 		}
 		t.lk.Lock()
+		handler := t.messageHandler
+		t.lk.Unlock()
 
-		if t.messageHandler != nil {
-			data, err := t.messageHandler(msg.ReceivedFrom, t.t.String(), msg.Data)
+		if handler != nil {
+			data, err := handler(msg.ReceivedFrom, t.t.String(), msg.Data)
 			if !strings.Contains(t.t.String(), "/_response") {
 				// This is a normal message; respond with data and error
 				go func() {
@@ -302,7 +304,6 @@ func (t *Topic) listen() {
 				log.Errorf("response message handler: %v", err)
 			}
 		}
-		t.lk.Unlock()
 	}
 }
 

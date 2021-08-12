@@ -91,6 +91,7 @@ func NewTopic(ctx context.Context, ps *pubsub.PubSub, host peer.ID, topic string
 	}
 	t.resTopic, err = newTopic(ctx, ps, host, responseTopic(topic, host), true)
 	if err != nil {
+		t.cancel()
 		return nil, fmt.Errorf("creating response topic: %v", err)
 	}
 	t.resTopic.eventHandler = t.resEventHandler
@@ -298,10 +299,8 @@ func (t *Topic) listen() {
 			data, err := handler(msg.ReceivedFrom, t.t.String(), msg.Data)
 			if !strings.Contains(t.t.String(), "/_response") {
 				// This is a normal message; respond with data and error
-				go func() {
-					msgID := cid.NewCidV1(cid.Raw, util.Hash(msg.Data))
-					t.publishResponse(msg.ReceivedFrom, msgID, data, err)
-				}()
+				msgID := cid.NewCidV1(cid.Raw, util.Hash(msg.Data))
+				t.publishResponse(msg.ReceivedFrom, msgID, data, err)
 			} else if err != nil {
 				log.Errorf("response message handler: %v", err)
 			}
@@ -311,10 +310,7 @@ func (t *Topic) listen() {
 
 func (t *Topic) publishResponse(from peer.ID, id cid.Cid, data []byte, e error) {
 	topic, err := newTopic(t.ctx, t.ps, t.host, responseTopic(t.t.String(), from), false)
-	if err != nil &&
-		// this can happen when more than one messages are received
-		// from the same peer.
-		!strings.Contains(err.Error(), "topic already exists") {
+	if err != nil {
 		log.Errorf("creating response topic: %v", err)
 		return
 	}

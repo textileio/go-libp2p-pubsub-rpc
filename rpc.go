@@ -91,7 +91,7 @@ func NewTopic(ctx context.Context, ps *pubsub.PubSub, host peer.ID, topic string
 	}
 	t.resTopic, err = newTopic(ctx, ps, host, responseTopic(topic, host), true)
 	if err != nil {
-		t.cancel()
+		_ = t.Close()
 		return nil, fmt.Errorf("creating response topic: %v", err)
 	}
 	t.resTopic.eventHandler = t.resEventHandler
@@ -107,6 +107,7 @@ func newTopic(ctx context.Context, ps *pubsub.PubSub, host peer.ID, topic string
 
 	handler, err := top.EventHandler()
 	if err != nil {
+		_ = top.Close()
 		return nil, fmt.Errorf("getting topic handler: %v", err)
 	}
 
@@ -114,6 +115,8 @@ func newTopic(ctx context.Context, ps *pubsub.PubSub, host peer.ID, topic string
 	if subscribe {
 		sub, err = top.Subscribe()
 		if err != nil {
+			handler.Cancel()
+			_ = top.Close()
 			return nil, fmt.Errorf("subscribing to topic: %v", err)
 		}
 	}

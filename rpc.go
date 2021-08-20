@@ -57,10 +57,11 @@ func responseTopic(base string, pid peer.ID) string {
 }
 
 type ongoingMessage struct {
-	ctx    context.Context
-	data   []byte
-	opts   []pubsub.PubOpt
-	respCh chan internalResponse
+	ctx       context.Context
+	data      []byte
+	opts      []pubsub.PubOpt
+	respCh    chan internalResponse
+	republish bool
 }
 
 // Topic provides a nice interface to a libp2p pubsub topic.
@@ -192,19 +193,26 @@ func (t *Topic) Publish(
 	if !args.ignoreResponse {
 		respCh = make(chan internalResponse)
 	}
-	t.lk.Lock()
-	t.ongoing[msgID] = ongoingMessage{
-		ctx:    ctx,
-		data:   data,
-		opts:   args.pubOpts,
-		respCh: respCh,
+
+	if !args.ignoreResponse || args.republish {
+		t.lk.Lock()
+		t.ongoing[msgID] = ongoingMessage{
+			ctx:       ctx,
+			data:      data,
+			opts:      args.pubOpts,
+			respCh:    respCh,
+			republish: args.republish,
+		}
+		t.lk.Unlock()
 	}
-	t.lk.Unlock()
 
 	if err := t.t.Publish(ctx, data, args.pubOpts...); err != nil {
 		return nil, fmt.Errorf("publishing to topic: %v", err)
 	}
 
+	if args.ignoreResponse && !args.republish {
+		return nil, nil
+	}
 	resultCh := make(chan Response)
 	go func() {
 		defer func() {
@@ -275,12 +283,14 @@ func (t *Topic) watch() {
 func (t *Topic) republishTo(p peer.ID) {
 	t.lk.Lock()
 	for _, m := range t.ongoing {
-		go func(m ongoingMessage) {
-			log.Debugf("republishing %s because peer %s newly joins", t.t, p)
-			if err := t.t.Publish(m.ctx, m.data, m.opts...); err != nil {
-				log.Errorf("republishing to topic: %v", err)
-			}
-		}(m)
+		if m.republish {
+			go func(m ongoingMessage) {
+				log.Debugf("republishing %s because peer %s newly joins", t.t, p)
+				if err := t.t.Publish(m.ctx, m.data, m.opts...); err != nil {
+					log.Errorf("republishing to topic: %v", err)
+				}
+			}(m)
+		}
 	}
 	t.lk.Unlock()
 }

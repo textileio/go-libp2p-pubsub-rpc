@@ -64,7 +64,7 @@ func TestPingPong(t *testing.T) {
 	t2.SetMessageHandler(messageHandler)
 	fin.Add(t2)
 
-	time.Sleep(time.Second) // wait for mdns discovery
+	time.Sleep(time.Second * 2) // wait for mdns discovery
 
 	// peer1 requests "pong" from peer2
 	rc1, err := t1.Publish(context.Background(), []byte("ping"))
@@ -92,7 +92,7 @@ func TestPingPong(t *testing.T) {
 	require.NoError(t, err)
 	cancel()
 
-	// test retries; peer1 requests "pong" from peer2, but peer2 joins topic after the request
+	// test republishing; peer1 requests "pong" from peer2, but peer2 joins topic after the request
 	t3, err := p1.NewTopic(context.Background(), "topic2", true)
 	require.NoError(t, err)
 	t3.SetEventHandler(eventHandler)
@@ -115,7 +115,7 @@ func TestPingPong(t *testing.T) {
 	// allow enough time for peer2 join event to be propagated.
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
-	rc3, err := t3.Publish(ctx, []byte("ping"))
+	rc3, err := t3.Publish(ctx, []byte("ping"), rpc.WithRepublishing(true))
 	require.NoError(t, err)
 	r3 := <-rc3
 	require.NoError(t, r3.Err)
@@ -175,7 +175,7 @@ func TestMultiPingPong(t *testing.T) {
 	t3.SetMessageHandler(messageHandler)
 	fin.Add(t3)
 
-	time.Sleep(time.Second) // wait for mdns discovery
+	time.Sleep(time.Second * 2) // wait for mdns discovery
 
 	// peer1 requests "pong" from peer2 and peer3
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -192,7 +192,7 @@ func TestMultiPingPong(t *testing.T) {
 	}
 	assert.Len(t, pongs, 2)
 
-	// test retries; peer1 requests "pong" from peer2 and peer3, but peer2 and peer3 join topic after the request
+	// test republishing; peer1 requests "pong" from peer2 and peer3, but peer2 and peer3 join topic after the request
 	t4, err := p1.NewTopic(context.Background(), "topic2", true)
 	require.NoError(t, err)
 	t4.SetEventHandler(eventHandler)
@@ -226,6 +226,7 @@ func TestMultiPingPong(t *testing.T) {
 		ctx2,
 		[]byte("ping"),
 		rpc.WithMultiResponse(true),
+		rpc.WithRepublishing(true),
 	)
 	require.NoError(t, err)
 	var pongs2 []struct{}

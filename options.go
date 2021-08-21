@@ -8,12 +8,14 @@ import (
 type PublishOptions struct {
 	ignoreResponse bool
 	multiResponse  bool
+	republish      bool
 	pubOpts        []pubsub.PubOpt
 }
 
 var defaultOptions = PublishOptions{
 	ignoreResponse: false,
 	multiResponse:  false,
+	republish:      false,
 }
 
 // PublishOption defines a Publish option.
@@ -33,6 +35,16 @@ func WithIgnoreResponse(enable bool) PublishOption {
 func WithMultiResponse(enable bool) PublishOption {
 	return func(args *PublishOptions) error {
 		args.multiResponse = enable
+		return nil
+	}
+}
+
+// WithRepublishing indicates whether or not Publish will continue republishing to newly joined peers as long
+// as the context hasn't expired or is not canceled.
+// Default: disabled.
+func WithRepublishing(enable bool) PublishOption {
+	return func(args *PublishOptions) error {
+		args.republish = enable
 		return nil
 	}
 }

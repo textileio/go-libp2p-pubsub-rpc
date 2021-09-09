@@ -118,7 +118,9 @@ func New(conf Config) (*Peer, error) {
 	if err := os.MkdirAll(repoPath, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("making dir: %v", err)
 	}
-	dstore, err := badger.NewDatastore(repoPath, &badger.DefaultOptions)
+	opt := badger.DefaultOptions
+	opt.Options = opt.Options.WithMemTableSize(0)
+	dstore, err := badger.NewDatastore(repoPath, &opt)
 	if err != nil {
 		return nil, fin.Cleanupf("creating repo: %v", err)
 	}

@@ -20,7 +20,7 @@ require (
 	github.com/libp2p/go-libp2p-peerstore v0.2.7
 	github.com/libp2p/go-libp2p-pubsub v0.5.0
 	github.com/libp2p/go-libp2p-quic-transport v0.11.1
-	github.com/multiformats/go-multiaddr v0.3.3
+	github.com/multiformats/go-multiaddr v0.4.1
 	github.com/polydawn/refmt v0.0.0-20190809202753-05966cbd336a // indirect
 	github.com/prometheus/client_golang v1.11.0 // indirect
 	github.com/smartystreets/assertions v1.0.1 // indirect

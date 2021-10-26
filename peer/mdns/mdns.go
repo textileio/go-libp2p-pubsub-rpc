@@ -16,9 +16,6 @@ const connTimeout = time.Second * 10
 
 // Start the MDNS discovery.
 func Start(ctx context.Context, host host.Host, intervalSecs int) error {
-	if intervalSecs <= 0 {
-		intervalSecs = 5
-	}
 	service := mdns.NewMdnsService(host, mdns.ServiceName)
 	service.RegisterNotifee(&handler{
 		ctx:  ctx,

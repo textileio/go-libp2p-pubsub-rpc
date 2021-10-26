@@ -2,12 +2,11 @@ package mdns
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p/p2p/discovery"
+	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	golog "github.com/textileio/go-log/v2"
 )
 
@@ -20,11 +19,8 @@ func Start(ctx context.Context, host host.Host, intervalSecs int) error {
 	if intervalSecs <= 0 {
 		intervalSecs = 5
 	}
-	dur := time.Duration(intervalSecs) * time.Second
-	service, err := discovery.NewMdnsService(ctx, host, dur, discovery.ServiceTag)
-	if err != nil {
-		return fmt.Errorf("creating mdns service: %v", err)
-	}
+	//dur := time.Duration(intervalSecs) * time.Second
+	service := mdns.NewMdnsService(host, mdns.ServiceName)
 	service.RegisterNotifee(&handler{
 		ctx:  ctx,
 		host: host,

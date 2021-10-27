@@ -15,7 +15,7 @@ var log = golog.Logger("psrpc/mdns")
 const connTimeout = time.Second * 10
 
 // Start the MDNS discovery.
-func Start(ctx context.Context, host host.Host, intervalSecs int) error {
+func Start(ctx context.Context, host host.Host) error {
 	service := mdns.NewMdnsService(host, mdns.ServiceName)
 	service.RegisterNotifee(&handler{
 		ctx:  ctx,

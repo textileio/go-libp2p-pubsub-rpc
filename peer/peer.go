@@ -42,7 +42,6 @@ type Config struct {
 	EnableQUIC               bool
 	EnableNATPortMap         bool
 	EnableMDNS               bool
-	MDNSIntervalSeconds      int
 	EnablePubSubPeerExchange bool
 	EnablePubSubFloodPublish bool
 }
@@ -53,9 +52,6 @@ func setDefaults(conf *Config) {
 	}
 	if conf.ConnManager == nil {
 		conf.ConnManager = connmgr.NewConnManager(256, 512, time.Second*120)
-	}
-	if conf.MDNSIntervalSeconds <= 0 {
-		conf.MDNSIntervalSeconds = 1
 	}
 }
 
@@ -167,11 +163,9 @@ func New(conf Config) (*Peer, error) {
 	}
 
 	if conf.EnableMDNS {
-		if err := mdns.Start(ctx, p.host, conf.MDNSIntervalSeconds); err != nil {
+		if err := mdns.Start(ctx, p.host); err != nil {
 			return nil, fin.Cleanupf("enabling mdns: %v", err)
 		}
-
-		log.Infof("mdns was enabled (interval=%ds)", conf.MDNSIntervalSeconds)
 	}
 
 	return p, nil

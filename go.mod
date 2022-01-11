@@ -15,10 +15,10 @@ require (
 	github.com/ipfs/go-ipld-format v0.2.0
 	github.com/libp2p/go-libp2p v0.15.1
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
-	github.com/libp2p/go-libp2p-core v0.9.0
+	github.com/libp2p/go-libp2p-core v0.10.0
 	github.com/libp2p/go-libp2p-peerstore v0.3.0
 	github.com/libp2p/go-libp2p-pubsub v0.5.5
-	github.com/libp2p/go-libp2p-quic-transport v0.11.2
+	github.com/libp2p/go-libp2p-quic-transport v0.15.2
 	github.com/multiformats/go-multiaddr v0.4.1
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/stretchr/testify v1.7.0

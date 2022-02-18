@@ -2,6 +2,7 @@ package mdns
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -16,11 +17,13 @@ const connTimeout = time.Second * 10
 
 // Start the MDNS discovery.
 func Start(ctx context.Context, host host.Host) error {
-	service := mdns.NewMdnsService(host, mdns.ServiceName)
-	service.RegisterNotifee(&handler{
+	service := mdns.NewMdnsService(host, mdns.ServiceName, &handler{
 		ctx:  ctx,
 		host: host,
 	})
+	if err := service.Start(); err != nil {
+		return fmt.Errorf("staring mdns service: %s", err)
+	}
 	return nil
 }
 

@@ -90,7 +90,6 @@ func New(conf Config) (*Peer, error) {
 
 	opts := []libp2p.Option{
 		libp2p.ConnectionManager(conf.ConnManager),
-		libp2p.DefaultTransports,
 		libp2p.DisableRelay(),
 	}
 	if len(announceAddrs) != 0 {

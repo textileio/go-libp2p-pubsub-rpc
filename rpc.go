@@ -307,17 +307,22 @@ func (t *Topic) listen() {
 		t.lk.Lock()
 		handler := t.messageHandler
 		t.lk.Unlock()
-
-		if handler != nil {
-			data, err := handler(msg.ReceivedFrom, t.t.String(), msg.Data)
-			if !strings.Contains(t.t.String(), "/_response") {
-				// This is a normal message; respond with data and error
-				msgID := cid.NewCidV1(cid.Raw, util.Hash(msg.Data))
-				t.publishResponse(msg.ReceivedFrom, msgID, data, err)
-			} else if err != nil {
-				log.Errorf("response message handler: %v", err)
-			}
+		if handler == nil {
+			log.Warnf("didn't process topic message since we don't have a handler")
+			continue
 		}
+		go processSubscriptionMessage(handler, msg.ReceivedFrom, t, msg.Data)
+	}
+}
+
+func processSubscriptionMessage(handler MessageHandler, from peer.ID, t *Topic, msgData []byte) {
+	res, err := handler(from, t.t.String(), msgData)
+	if !strings.Contains(t.t.String(), "/_response") {
+		// This is a normal message; respond with data and error
+		msgID := cid.NewCidV1(cid.Raw, util.Hash(msgData))
+		t.publishResponse(from, msgID, res, err)
+	} else if err != nil {
+		log.Errorf("response message handler: %v", err)
 	}
 }
 

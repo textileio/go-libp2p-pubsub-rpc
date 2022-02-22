@@ -317,12 +317,15 @@ func (t *Topic) listen() {
 
 func processSubscriptionMessage(handler MessageHandler, from peer.ID, t *Topic, msgData []byte) {
 	res, err := handler(from, t.t.String(), msgData)
+	if err != nil {
+		log.Errorf("subcription message handler: %v", err)
+		// Intentionally not returning since we send the error
+		// to the other side in the response.
+	}
 	if !strings.Contains(t.t.String(), "/_response") {
 		// This is a normal message; respond with data and error
 		msgID := cid.NewCidV1(cid.Raw, util.Hash(msgData))
 		t.publishResponse(from, msgID, res, err)
-	} else if err != nil {
-		log.Errorf("response message handler: %v", err)
 	}
 }
 

@@ -51,7 +51,11 @@ func setDefaults(conf *Config) {
 		conf.ListenMultiaddrs = []string{"/ip4/0.0.0.0/tcp/0"}
 	}
 	if conf.ConnManager == nil {
-		conf.ConnManager = connmgr.NewConnManager(256, 512, time.Second*120)
+		cm, err := connmgr.NewConnManager(256, 512, connmgr.WithGracePeriod(time.Second*120))
+		if err != nil {
+			panic(err)
+		}
+		conf.ConnManager = cm
 	}
 }
 

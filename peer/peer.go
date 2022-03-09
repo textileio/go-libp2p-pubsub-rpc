@@ -51,7 +51,11 @@ func setDefaults(conf *Config) {
 		conf.ListenMultiaddrs = []string{"/ip4/0.0.0.0/tcp/0"}
 	}
 	if conf.ConnManager == nil {
-		conf.ConnManager = connmgr.NewConnManager(256, 512, time.Second*120)
+		cm, err := connmgr.NewConnManager(256, 512, connmgr.WithGracePeriod(time.Second*120))
+		if err != nil {
+			panic(err)
+		}
+		conf.ConnManager = cm
 	}
 }
 
@@ -90,7 +94,6 @@ func New(conf Config) (*Peer, error) {
 
 	opts := []libp2p.Option{
 		libp2p.ConnectionManager(conf.ConnManager),
-		libp2p.DefaultTransports,
 		libp2p.DisableRelay(),
 	}
 	if len(announceAddrs) != 0 {

@@ -17,7 +17,7 @@ require (
 	github.com/libp2p/go-libp2p-connmgr v0.3.1
 	github.com/libp2p/go-libp2p-core v0.13.0
 	github.com/libp2p/go-libp2p-peerstore v0.6.0
-	github.com/libp2p/go-libp2p-pubsub v0.5.5
+	github.com/libp2p/go-libp2p-pubsub v0.6.1
 	github.com/libp2p/go-libp2p-quic-transport v0.15.2
 	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/smartystreets/assertions v1.0.1 // indirect

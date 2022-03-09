@@ -6,12 +6,12 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20190812055157-5d271430af9f // indirect
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
-	github.com/hsanjuan/ipfs-lite v1.2.0
+	github.com/hsanjuan/ipfs-lite v1.2.1-0.20220309173135-e3246b1d1b2f
 	github.com/ipfs/go-cid v0.1.0
-	github.com/ipfs/go-ipfs-blockstore v1.1.1
+	github.com/ipfs/go-ipfs-blockstore v1.1.2
 	github.com/ipfs/go-ipfs-config v0.16.0
 	github.com/ipfs/go-ipfs-util v0.0.2
-	github.com/ipfs/go-ipld-cbor v0.0.5
+	github.com/ipfs/go-ipld-cbor v0.0.6
 	github.com/ipfs/go-ipld-format v0.2.0
 	github.com/libp2p/go-libp2p v0.17.0
 	github.com/libp2p/go-libp2p-connmgr v0.3.1
@@ -19,10 +19,10 @@ require (
 	github.com/libp2p/go-libp2p-peerstore v0.6.0
 	github.com/libp2p/go-libp2p-pubsub v0.5.5
 	github.com/libp2p/go-libp2p-quic-transport v0.15.2
-	github.com/multiformats/go-multiaddr v0.4.1
+	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/textileio/go-ds-badger3 v0.0.0-20210324034212-7b7fb3be3d1c
+	github.com/textileio/go-ds-badger3 v0.1.0
 	github.com/textileio/go-log/v2 v2.1.3-gke-1
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2 // indirect
 	go.uber.org/zap v1.19.0
@@ -32,7 +32,7 @@ require (
 
 require (
 	github.com/DataDog/zstd v1.4.1 // indirect
-	github.com/Stebalien/go-bitfield v0.0.1 // indirect
+	github.com/alecthomas/units v0.0.0-20210927113745-59d0afb8317a // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
@@ -67,6 +67,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/huin/goupnp v1.0.2 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
+	github.com/ipfs/go-bitfield v1.0.0 // indirect
 	github.com/ipfs/go-bitswap v0.5.1 // indirect
 	github.com/ipfs/go-block-format v0.0.3 // indirect
 	github.com/ipfs/go-blockservice v0.2.1 // indirect
@@ -89,7 +90,7 @@ require (
 	github.com/ipfs/go-merkledag v0.5.1 // indirect
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
 	github.com/ipfs/go-peertaskqueue v0.7.0 // indirect
-	github.com/ipfs/go-unixfs v0.2.6 // indirect
+	github.com/ipfs/go-unixfs v0.3.1 // indirect
 	github.com/ipfs/go-verifcid v0.0.1 // indirect
 	github.com/ipfs/interface-go-ipfs-core v0.4.0 // indirect
 	github.com/ipld/go-codec-dagpb v1.3.0 // indirect
@@ -193,8 +194,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	lukechampine.com/blake3 v1.1.6 // indirect
 )
-
-replace github.com/textileio/go-ds-badger3 => ../go-ds-badger3
-
-//TODO(jsign
-replace github.com/hsanjuan/ipfs-lite => ../ipfs-lite

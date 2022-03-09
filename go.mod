@@ -15,7 +15,7 @@ require (
 	github.com/ipfs/go-ipld-format v0.2.0
 	github.com/libp2p/go-libp2p v0.17.0
 	github.com/libp2p/go-libp2p-connmgr v0.3.1
-	github.com/libp2p/go-libp2p-core v0.13.0
+	github.com/libp2p/go-libp2p-core v0.14.0
 	github.com/libp2p/go-libp2p-peerstore v0.6.0
 	github.com/libp2p/go-libp2p-pubsub v0.5.5
 	github.com/libp2p/go-libp2p-quic-transport v0.15.2

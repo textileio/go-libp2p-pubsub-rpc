@@ -20,7 +20,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	ps "github.com/libp2p/go-libp2p-pubsub"
-	quic "github.com/libp2p/go-libp2p-quic-transport"
 	"github.com/multiformats/go-multiaddr"
 	badger "github.com/textileio/go-ds-badger3"
 	rpc "github.com/textileio/go-libp2p-pubsub-rpc"
@@ -103,9 +102,6 @@ func New(conf Config) (*Peer, error) {
 	}
 	if conf.EnableNATPortMap {
 		opts = append(opts, libp2p.NATPortMap())
-	}
-	if conf.EnableQUIC {
-		opts = append(opts, libp2p.Transport(quic.NewTransport))
 	}
 
 	fin := finalizer.NewFinalizer()

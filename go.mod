@@ -18,15 +18,14 @@ require (
 	github.com/libp2p/go-libp2p-core v0.13.0
 	github.com/libp2p/go-libp2p-peerstore v0.6.0
 	github.com/libp2p/go-libp2p-pubsub v0.5.5
-	github.com/libp2p/go-libp2p-quic-transport v0.15.2
+	github.com/libp2p/go-libp2p-quic-transport v0.15.2 // indirect
 	github.com/multiformats/go-multiaddr v0.5.0
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/textileio/go-ds-badger3 v0.1.0
 	github.com/textileio/go-log/v2 v2.1.3-gke-1
 	github.com/whyrusleeping/cbor-gen v0.0.0-20210219115102-f37d292932f2 // indirect
-	go.uber.org/zap v1.19.0
-	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	go.uber.org/zap v1.22.0
 	golang.org/x/tools v0.1.2 // indirect
 )
 
@@ -191,6 +190,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.6 // indirect
 )
